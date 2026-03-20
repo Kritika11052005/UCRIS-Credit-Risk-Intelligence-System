@@ -1,0 +1,42 @@
+{
+  "model": "Separate RF + XGBoost (Ablation)",
+  "tasks": {
+    "A": "Stress Detection \u2014 Random Forest",
+    "B": "Escalation Detection \u2014 XGBoost"
+  },
+  "date_trained": "2026-03-18",
+  "test_metrics": {
+    "task_a_weighted_f1": 0.9852,
+    "task_a_f1_low": 0.99,
+    "task_a_f1_medium": 0.975,
+    "task_a_f1_high": 0.9858,
+    "task_b_recall": 0.9963,
+    "task_b_precision": 0.9963,
+    "task_b_f1": 0.9963,
+    "task_b_auc": 0.9999,
+    "combined_score": 0.9907
+  },
+  "features_used": [
+    "avg_utilization",
+    "util_change",
+    "avg_pay_delay",
+    "consecutive_delays",
+    "avg_repay_ratio",
+    "spending_volatility",
+    "pay_delay_trend",
+    "pay_amt_trend",
+    "LIMIT_BAL",
+    "SEX_2",
+    "EDUCATION_2",
+    "EDUCATION_3",
+    "EDUCATION_4",
+    "MARRIAGE_2",
+    "MARRIAGE_3"
+  ],
+  "notes": [
+    "Ablation Model 4 \u2014 separate independent training",
+    "No shared representation between tasks",
+    "Sets benchmark for joint model comparison",
+    "Combined score is average of Task A F1 + Task B Recall"
+  ]
+}

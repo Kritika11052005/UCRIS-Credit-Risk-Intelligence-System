@@ -1,0 +1,54 @@
+{
+  "model": "XGBoost",
+  "task": "Escalation Detection (Task B)",
+  "classes": [
+    "Stable",
+    "Escalating"
+  ],
+  "date_trained": "2026-03-18",
+  "best_params": {
+    "subsample": "0.6",
+    "scale_pos_weight": "1.8642344497607657",
+    "reg_lambda": "0.5",
+    "reg_alpha": "0",
+    "n_estimators": "500",
+    "min_child_weight": "7",
+    "max_depth": "7",
+    "learning_rate": "0.2",
+    "gamma": "0",
+    "colsample_bytree": "0.9"
+  },
+  "cv_recall": 0.9942,
+  "test_metrics": {
+    "recall": 0.9944,
+    "precision": 0.9922,
+    "f1": 0.9933,
+    "auc_roc": 0.9998,
+    "error_rate": 0.006
+  },
+  "features_used": [
+    "avg_utilization",
+    "util_change",
+    "avg_pay_delay",
+    "consecutive_delays",
+    "avg_repay_ratio",
+    "spending_volatility",
+    "pay_delay_trend",
+    "pay_amt_trend",
+    "LIMIT_BAL",
+    "SEX_2",
+    "EDUCATION_2",
+    "EDUCATION_3",
+    "EDUCATION_4",
+    "MARRIAGE_2",
+    "MARRIAGE_3"
+  ],
+  "scaling_required": false,
+  "notes": [
+    "Baseline Model 3 \u2014 escalation detection (Task B)",
+    "Primary metric: Recall",
+    "scale_pos_weight=1.864 key driver of recall",
+    "AUC near perfect \u2014 strong discriminator",
+    "Binary SHAP \u2014 2D array not 3D like multiclass"
+  ]
+}
