@@ -1,0 +1,43 @@
+# ── Virtual Environment ───────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ── Environment Variables ─────────────────────────────────
+.env
+*.env
+
+# ── Python Cache ──────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── Prisma Generated Client ───────────────────────────────
+app/generated/
+
+# ── Node (for local Prisma CLI) ───────────────────────────
+node_modules/
+package-lock.json
+
+# ── Logs ──────────────────────────────────────────────────
+*.log
+pip_err.txt
+pip_install_log.txt
+
+# ── IDE ───────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── OS ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Models (too large for git) ────────────────────────────
+*.pkl
+*.pt
+*.pth
+
+# ── Jupyter ───────────────────────────────────────────────
+.ipynb_checkpoints/
