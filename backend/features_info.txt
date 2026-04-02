@@ -1,0 +1,3 @@
+Scaler expects: 15
+fnames length: 19
+fnames: ['avg_utilization', 'util_change', 'avg_pay_delay', 'consecutive_delays', 'avg_repay_ratio', 'spending_volatility', 'pay_delay_trend', 'pay_amt_trend', 'LIMIT_BAL', 'SEX_2', 'EDUCATION_2', 'EDUCATION_3', 'EDUCATION_4', 'MARRIAGE_2', 'MARRIAGE_3', 'RF_prob_low', 'RF_prob_medium', 'RF_prob_high', 'XGB_esc_prob']

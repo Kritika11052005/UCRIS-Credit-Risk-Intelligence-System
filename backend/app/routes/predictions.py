@@ -77,9 +77,10 @@ async def predict(
             f"Recommended action: {result['recommended_action']}."
         )
 
+    from app.generated.prisma import Json
     prediction = await db.prediction.create(data={
-        "customer_id":        body.customer_id,
-        "requested_by":       current_user.id,
+        "customer":           {"connect": {"id": body.customer_id}},
+        "requester":          {"connect": {"id": current_user.id}},
         "stress_level":       result["stress_level"],
         "stress_label":       result["stress_label"],
         "stress_prob_low":    result["stress_prob_low"],
@@ -89,7 +90,7 @@ async def predict(
         "escalation_prob":    result["escalation_prob"],
         "recommended_action": result["recommended_action"],
         "confidence":         result["confidence"],
-        "shap_factors":       result["shap_factors"],
+        "shap_factors":       Json(result["shap_factors"]),
         "gemini_narrative":   narrative,
         "model_version":      result["model_version"],
     })

@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-border-subtle: var(--bg-border);
+  --color-border-glow: var(--bg-border-glow);
+
+  --color-primary: var(--accent-primary);
+  --color-secondary: var(--accent-secondary);
+
+  --color-risk-low: var(--risk-low);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-high: var(--risk-high);
+  --color-risk-critical: var(--risk-critical);
+  --color-risk-escalating: var(--risk-escalating);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-bricolage);
+  --font-mono: var(--font-jetbrains);
+}
+
+@layer base {
+  :root {
+    --bg-base: #0D0D0D;
+    --bg-surface: #111111;
+    --bg-elevated: #171717;
+    --bg-border: #1F1F1F;
+    --bg-border-glow: #2A2A2A;
+
+    --accent-primary: #F97316;
+    --accent-secondary: #FBBF24;
+    --accent-glow: rgba(249, 115, 22, 0.15);
+
+    --risk-low: #22C55E;
+    --risk-medium: #FBBF24;
+    --risk-high: #F97316;
+    --risk-critical: #EF4444;
+    --risk-escalating: #FB923C;
+
+    --text-primary: #F5F5F5;
+    --text-secondary: #A3A3A3;
+    --text-muted: #525252;
+    --text-inverse: #0D0D0D;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--bg-border);
+  }
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.02);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  
+  .glow-orange {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
+    transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glow-orange:hover {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.35);
+  }
+
+  .text-gradient-orange {
+    background: linear-gradient(135deg, #F97316, #FBBF24);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .noise-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+  }
+}

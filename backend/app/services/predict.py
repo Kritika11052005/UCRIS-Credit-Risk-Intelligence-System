@@ -86,6 +86,10 @@ from src.feature_engineering import engineer_features as src_engineer_features
 
 def engineer_features(data: dict) -> pd.DataFrame:
     """Transform raw API dictionary to model-ready DataFrame using src.feature_engineering."""
+    
+    if "pay_1" in data:
+        data["pay_0"] = data.pop("pay_1")
+        
     # src.engineer_features expects a DataFrame
     raw_df = pd.DataFrame([data])
     
@@ -98,24 +102,37 @@ def engineer_features(data: dict) -> pd.DataFrame:
         "marriage": "MARRIAGE",
         "age": "AGE"
     }
-    for i in range(1, 7):
-        col_map[f"pay_{i}"] = f"PAY_{i}" if i != 1 else "PAY_0" # UCI uses PAY_0
-        col_map[f"bill_amt{i}"] = f"BILL_AMT{i}"
-        col_map[f"pay_amt{i}"] = f"PAY_AMT{i}"
     
-    # Special case for pay_1 vs pay_0
-    if "pay_1" in data:
-        data["pay_0"] = data.pop("pay_1")
+    if "avg_utilization" in data:
+        processed_df = raw_df.rename(columns=col_map)
+    else:
+        for i in range(1, 7):
+            col_map[f"pay_{i}"] = f"PAY_{i}" if i != 1 else "PAY_0" # UCI uses PAY_0
+            col_map[f"bill_amt{i}"] = f"BILL_AMT{i}"
+            col_map[f"pay_amt{i}"] = f"PAY_AMT{i}"
         
-    raw_df = raw_df.rename(columns=col_map)
-    processed_df = src_engineer_features(raw_df)
+        raw_df = raw_df.rename(columns=col_map)
+        processed_df = src_engineer_features(raw_df)
     
-    # Catgeorical encoding already handled or needed?
-    from src.feature_engineering import encode_categoricals
-    processed_df = encode_categoricals(processed_df)
+    # Predict manually handles categorical encoding for single row
+    # because pd.get_dummies() fails on single rows when using drop_first
+    base_features = [f for f in feature_names if not f.startswith("RF_prob_") and not f.startswith("XGB_")]
     
-    return processed_df[feature_names]
-
+    for col in base_features:
+        if col not in processed_df:
+            if col.startswith("SEX_"):
+                val = int(col.split("_")[1])
+                processed_df[col] = (processed_df.get("SEX", np.nan) == val).astype(int)
+            elif col.startswith("EDUCATION_"):
+                val = int(col.split("_")[1])
+                processed_df[col] = (processed_df.get("EDUCATION", np.nan) == val).astype(int)
+            elif col.startswith("MARRIAGE_"):
+                val = int(col.split("_")[1])
+                processed_df[col] = (processed_df.get("MARRIAGE", np.nan) == val).astype(int)
+            else:
+                processed_df[col] = 0
+                
+    return processed_df[base_features]
 
 # ── Prediction pipeline ───────────────────────────────────────────────────────
 
@@ -143,7 +160,7 @@ def run_prediction(customer_data: dict) -> dict:
     with torch.no_grad():
         stress_logits, esc_logit = hybrid_model(X_tensor)
         stress_probs = torch.softmax(stress_logits, dim=1).numpy()[0]
-        esc_prob     = torch.sigmoid(esc_logit).numpy()[0][0]
+        esc_prob     = torch.sigmoid(esc_logit).numpy()[0]
 
     stress_level = int(np.argmax(stress_probs))
     stress_label = STRESS_LABELS[stress_level]
