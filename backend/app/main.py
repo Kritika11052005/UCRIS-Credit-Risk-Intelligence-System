@@ -9,7 +9,13 @@ from app.core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Load database connection
     await connect_db()
+    
+    # Load machine learning models
+    from app.services.predict import load_models
+    load_models()
+    
     yield
     await disconnect_db()
 

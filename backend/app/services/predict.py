@@ -63,13 +63,33 @@ HYBRID_PATH  = os.path.join(MODELS_DIR, "hybrid_joint", "model_full.pt")
 SCALER_PATH  = os.path.join(MODELS_DIR, "hybrid_joint", "scaler.pkl")
 FEATURES_PATH = os.path.join(MODELS_DIR, "hybrid_joint", "feature_names.pkl")
 
-# ── Load models once at startup ───────────────────────────────────────────────
-rf_model     = joblib.load(RF_PATH)
-xgb_model    = joblib.load(XGB_PATH)
-scaler       = joblib.load(SCALER_PATH)
-feature_names = joblib.load(FEATURES_PATH)
-hybrid_model = torch.load(HYBRID_PATH, map_location="cpu", weights_only=False)
-hybrid_model.eval()
+# ── Model state ───────────────────────────────────────────────────────────────
+rf_model      = None
+xgb_model     = None
+scaler        = None
+feature_names = None
+hybrid_model  = None
+
+def load_models():
+    """Load models into global variables (called during app lifespan)."""
+    global rf_model, xgb_model, scaler, feature_names, hybrid_model
+    
+    # If already loaded, skip
+    if rf_model is not None:
+        return
+        
+    print("[INFO] Loading ML models...")
+    try:
+        rf_model      = joblib.load(RF_PATH)
+        xgb_model     = joblib.load(XGB_PATH)
+        scaler        = joblib.load(SCALER_PATH)
+        feature_names = joblib.load(FEATURES_PATH)
+        hybrid_model  = torch.load(HYBRID_PATH, map_location="cpu", weights_only=False)
+        hybrid_model.eval()
+        print("[OK] All models loaded successfully.")
+    except Exception as e:
+        print(f"[ERROR] Failed to load models: {e}")
+        raise e
 
 STRESS_LABELS = {0: "Low", 1: "Medium", 2: "High"}
 ACTION_MAP = {
