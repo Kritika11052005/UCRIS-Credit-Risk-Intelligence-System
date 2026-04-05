@@ -51,9 +51,10 @@ def main():
         print("Build will likely fail at runtime with BinaryNotFoundError.")
         exit(1)
 
-    # Target destination: the backend root directory
-    # Prisma-Python looks in the project root by default
-    dest = Path(".") / target_name
+    # Target filename MUST have the 'prisma-' prefix as expected by the generator
+    target_filename = "prisma-query-engine-debian-openssl-3.0.x"
+    dest = Path(".") / target_filename
+    
     print(f"Found binary at: {found_binary}")
     print(f"Copying to: {dest.absolute()}")
     
