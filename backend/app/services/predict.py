@@ -1,59 +1,55 @@
 import numpy as np
 import pandas as pd
 import joblib
-import torch
-import shap
 import os
 import sys
-import torch.nn as nn
+import gc
 from app.core.config import settings
 
 # ── Model Architecture ────────────────────────────────────────────────────────
 # This must match the architecture used during training in the notebook.
-# Required because torch.load() expects the class definition to be available.
-class UCRISHybridJointModel(nn.Module):
-    def __init__(self, n_features=19, encoder_dims=[64, 32], head_dim=16, dropout_rate=0.2):
-        super(UCRISHybridJointModel, self).__init__()
-        encoder_layers = []
-        in_dim = n_features
-        for out_dim in encoder_dims:
-            encoder_layers.extend([
-                nn.Linear(in_dim, out_dim),
-                nn.BatchNorm1d(out_dim),
+# We define it here but it's only instantiated during lazy loading.
+def get_hybrid_model_class():
+    import torch.nn as nn
+    class UCRISHybridJointModel(nn.Module):
+        def __init__(self, n_features=19, encoder_dims=[64, 32], head_dim=16, dropout_rate=0.2):
+            super(UCRISHybridJointModel, self).__init__()
+            encoder_layers = []
+            in_dim = n_features
+            for out_dim in encoder_dims:
+                encoder_layers.extend([
+                    nn.Linear(in_dim, out_dim),
+                    nn.BatchNorm1d(out_dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout_rate)
+                ])
+                in_dim = out_dim
+            self.shared_encoder = nn.Sequential(*encoder_layers)
+            self.stress_head = nn.Sequential(
+                nn.Linear(encoder_dims[-1], head_dim),
                 nn.ReLU(),
-                nn.Dropout(dropout_rate)
-            ])
-            in_dim = out_dim
-        self.shared_encoder = nn.Sequential(*encoder_layers)
-        self.stress_head = nn.Sequential(
-            nn.Linear(encoder_dims[-1], head_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout_rate / 2),
-            nn.Linear(head_dim, 3)
-        )
-        self.escalation_head = nn.Sequential(
-            nn.Linear(encoder_dims[-1], head_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout_rate / 2),
-            nn.Linear(head_dim, 1)
-        )
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.zeros_(m.bias)
+                nn.Dropout(dropout_rate / 2),
+                nn.Linear(head_dim, 3)
+            )
+            self.escalation_head = nn.Sequential(
+                nn.Linear(encoder_dims[-1], head_dim),
+                nn.ReLU(),
+                nn.Dropout(dropout_rate / 2),
+                nn.Linear(head_dim, 1)
+            )
+            for m in self.modules():
+                if isinstance(m, nn.Linear):
+                    nn.init.xavier_uniform_(m.weight)
+                    nn.init.zeros_(m.bias)
 
-    def forward(self, x):
-        shared = self.shared_encoder(x)
-        stress_logits = self.stress_head(shared)
-        esc_logits = self.escalation_head(shared).squeeze(1)
-        return stress_logits, esc_logits
-
-# Patch __main__ so torch.load() can find the class (since it was saved in a notebook)
-import __main__
-__main__.UCRISHybridJointModel = UCRISHybridJointModel
+        def forward(self, x):
+            shared = self.shared_encoder(x)
+            stress_logits = self.stress_head(shared)
+            esc_logits = self.escalation_head(shared).squeeze(1)
+            return stress_logits, esc_logits
+    return UCRISHybridJointModel
 
 # ── Model paths ───────────────────────────────────────────────────────────────
-# Resolve relative to this file: services/ -> app/ -> backend/ -> project root
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 MODELS_DIR = os.path.join(_PROJECT_ROOT, "backend", "models")
 
@@ -71,24 +67,45 @@ feature_names = None
 hybrid_model  = None
 
 def load_models():
-    """Load models into global variables (called during app lifespan)."""
-    global rf_model, xgb_model, scaler, feature_names, hybrid_model
+    """Load lightweight models during startup (called by lifespan)."""
+    global rf_model, scaler, feature_names
     
-    # If already loaded, skip
     if rf_model is not None:
         return
         
-    print("[INFO] Loading ML models...")
+    print("[INFO] Loading basic models (RF, Scaler)...")
     try:
         rf_model      = joblib.load(RF_PATH)
-        xgb_model     = joblib.load(XGB_PATH)
         scaler        = joblib.load(SCALER_PATH)
         feature_names = joblib.load(FEATURES_PATH)
+        print("[OK] Basic models loaded.")
+        gc.collect()
+    except Exception as e:
+        print(f"[ERROR] Failed to load startup models: {e}")
+        raise e
+
+def _lazy_load_heavy_models():
+    """Load heavy models (XGBoost, PyTorch) on demand to save memory."""
+    global xgb_model, hybrid_model
+    
+    if xgb_model is not None and hybrid_model is not None:
+        return
+
+    print("[INFO] Lazy loading heavy models (XGBoost, PyTorch)...")
+    import torch
+    import __main__
+    
+    # Patch __main__ for torch.load()
+    __main__.UCRISHybridJointModel = get_hybrid_model_class()
+    
+    try:
+        xgb_model     = joblib.load(XGB_PATH)
         hybrid_model  = torch.load(HYBRID_PATH, map_location="cpu", weights_only=False)
         hybrid_model.eval()
-        print("[OK] All models loaded successfully.")
+        print("[OK] Heavy models loaded successfully.")
+        gc.collect()
     except Exception as e:
-        print(f"[ERROR] Failed to load models: {e}")
+        print(f"[ERROR] Failed to lazy load heavy models: {e}")
         raise e
 
 STRESS_LABELS = {0: "Low", 1: "Medium", 2: "High"}
@@ -157,7 +174,12 @@ def engineer_features(data: dict) -> pd.DataFrame:
 # ── Prediction pipeline ───────────────────────────────────────────────────────
 
 def run_prediction(customer_data: dict) -> dict:
-    """Full UCRIS prediction pipeline."""
+    """Full UCRIS prediction pipeline with lazy loading."""
+    
+    # Lazy load heavy models and libraries only when needed
+    _lazy_load_heavy_models()
+    import torch
+    import shap
 
     # Step 1: Feature engineering
     df = engineer_features(customer_data)
@@ -214,6 +236,8 @@ def run_prediction(customer_data: dict) -> dict:
             }
             for i in top_indices
         ]
+        # Clean up SHAP memory if possible
+        del explainer_tree
     except Exception as e:
         print(f"[WARN] SHAP calculation failed: {e}")
         # Return empty list or basic top features if SHAP crashes
