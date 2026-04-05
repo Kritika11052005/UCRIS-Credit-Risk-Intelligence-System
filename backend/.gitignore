@@ -34,10 +34,10 @@ pip_install_log.txt
 .DS_Store
 Thumbs.db
 
-# ── Models (too large for git) ────────────────────────────
-*.pkl
-*.pt
-*.pth
+# ── Models (Managed assets) ───────────────────────────────
+# Allow trained model files that are within Git's 100MB limit
+!models/**/*.pkl
+!models/**/*.pt
 
 # ── Jupyter ───────────────────────────────────────────────
 .ipynb_checkpoints/
