@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import connect_db, disconnect_db
 from app.routes.predictions import router as predictions_router
+from app.routes.chat import router as chat_router
 from app.core.config import settings
 
 
@@ -32,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(predictions_router)
+app.include_router(chat_router)
 
 
 @app.get("/", tags=["Health"])

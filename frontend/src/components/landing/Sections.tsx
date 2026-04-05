@@ -12,7 +12,7 @@ export function AboutSection() {
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
-    
+
     // Slide in text
     gsap.fromTo(textRef.current,
       { x: -60, opacity: 0 },
@@ -65,8 +65,8 @@ export function AboutSection() {
               <h3 className="font-display font-bold text-lg mb-2">Risk Escalation Prediction</h3>
               <p className="font-sans text-sm text-secondary-text">Distinguish temporary setbacks from accelerating structural default momentum.</p>
             </div>
-             {/* Card 3 */}
-             <div className="glass p-6 rounded-xl border-l-[3px] border-l-primary z-10 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(249,115,22,0.15)] bg-base/80">
+            {/* Card 3 */}
+            <div className="glass p-6 rounded-xl border-l-[3px] border-l-primary z-10 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(249,115,22,0.15)] bg-base/80">
               <h3 className="font-display font-bold text-lg mb-2">Explainable AI Narratives</h3>
               <p className="font-sans text-sm text-secondary-text">Generate natural language reports detailing why the model reached its conclusion.</p>
             </div>
@@ -79,10 +79,10 @@ export function AboutSection() {
 
 export function FeaturesSection() {
   const containerRef = useRef<HTMLElement>(null);
-  
+
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
-    
+
     gsap.fromTo(".feature-card",
       { y: 50, opacity: 0 },
       {
@@ -101,13 +101,13 @@ export function FeaturesSection() {
       const rect = cardRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      
+
       const rotateX = ((y - centerY) / centerY) * -8;
       const rotateY = ((x - centerX) / centerX) * 8;
-      
+
       setStyle({
         transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
         transition: "transform 0.1s"
@@ -122,9 +122,9 @@ export function FeaturesSection() {
     };
 
     return (
-      <div 
-        ref={cardRef} 
-        onMouseMove={handleMouseMove} 
+      <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={style}
         className={`feature-card relative glass p-6 rounded-xl border-l-[3px] ${borderStyle} group hover:glow-orange cursor-default bg-surface/50`}
@@ -232,7 +232,7 @@ export function PipelineSection() {
           scrub: true,
         }
       });
-      
+
       const nodes = gsap.utils.toArray(".pipeline-node");
       nodes.forEach((node: any) => {
         ScrollTrigger.create({
@@ -334,14 +334,14 @@ export function Footer() {
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-7xl mx-auto border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-muted-text">
         <div>&copy; 2026 UCRIS. All rights reserved.</div>
         <div className="flex items-center gap-1.5">
           Made with <svg className="w-4 h-4 text-risk-critical animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg> by
           <span className="text-secondary-text ml-1 flex items-center gap-2">
             <a href="https://github.com/Kritika11052005" target="_blank" rel="noopener noreferrer" className="hover:text-primary pl-1 border-l border-white/10 ml-2">Kritika Benjwal</a> &amp;
-            <a href="#" className="hover:text-primary">Gauri Sharma</a>
+            <a href="https://github.com/gauri-sharma9" className="hover:text-primary">Gauri Sharma</a>
           </span>
         </div>
       </div>

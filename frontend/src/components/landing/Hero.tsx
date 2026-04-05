@@ -21,11 +21,11 @@ export function Hero() {
     // Custom SplitText equivalent
     const splitText = (element: HTMLElement | null) => {
       if (!element) return [];
-      const text = element.innerText;
-      element.innerText = "";
+      const text = element.textContent || "";
+      element.textContent = "";
       const chars = text.split("").map((char) => {
         const span = document.createElement("span");
-        span.innerText = char === " " ? "\u00A0" : char;
+        span.textContent = char === " " ? "\u00A0" : char;
         span.style.display = "inline-block";
         element.appendChild(span);
         return span;
@@ -140,7 +140,7 @@ export function Hero() {
             Predict Risk
           </div>
           <div className="overflow-hidden inline-block">
-            <span ref={headlineLine2Ref} className="text-gradient-orange pb-2">Before Default Happens</span>
+            <span ref={headlineLine2Ref} className="text-[#FBBF24] pb-2">Before Default Happens</span>
           </div>
         </h1>
 

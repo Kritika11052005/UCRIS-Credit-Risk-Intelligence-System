@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database import db
 from app.core.security import decode_token
 from app.models.prediction import (
-    PredictionRequest, ChatRequest
+    PredictionRequest
 )
 from app.services.predict import run_prediction
 from app.services.chat import generate_narrative, chat_with_context
@@ -40,70 +40,78 @@ async def predict(
     Full UCRIS ML pipeline:
     RF + XGBoost + Hybrid joint model + SHAP + Gemini narrative
     """
-    customer = await db.customer.find_unique(
-        where={"id": body.customer_id},
-        include={"features": True}
-    )
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    if not customer.features:
-        raise HTTPException(status_code=400, detail="Customer features not computed")
-
-    customer_data = {
-        "limit_bal":          customer.limit_bal,
-        "sex":                customer.sex,
-        "education":          customer.education,
-        "marriage":           customer.marriage,
-        "age":                customer.age,
-        "avg_utilization":    customer.features.avg_utilization,
-        "util_change":        customer.features.util_change,
-        "pay_delay_trend":    customer.features.pay_delay_trend,
-        "avg_pay_delay":      customer.features.avg_pay_delay,
-        "consecutive_delays": customer.features.consecutive_delays,
-        "avg_repay_ratio":    customer.features.avg_repay_ratio,
-        "spending_volatility": customer.features.spending_volatility,
-        "pay_amt_trend":      customer.features.pay_amt_trend,
-    }
-
-    result = run_prediction(customer_data)
-
     try:
-        narrative = await generate_narrative(
-            result, {"customer_ref": customer.customer_ref}
+        customer = await db.customer.find_unique(
+            where={"id": body.customer_id},
+            include={"features": True}
         )
-    except Exception:
-        narrative = (
-            f"Customer shows {result['stress_label']} stress. "
-            f"Recommended action: {result['recommended_action']}."
-        )
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        if not customer.features:
+            raise HTTPException(status_code=400, detail="Customer features not computed")
 
-    from app.generated.prisma import Json
-    prediction = await db.prediction.create(data={
-        "customer":           {"connect": {"id": body.customer_id}},
-        "requester":          {"connect": {"id": current_user.id}},
-        "stress_level":       result["stress_level"],
-        "stress_label":       result["stress_label"],
-        "stress_prob_low":    result["stress_prob_low"],
-        "stress_prob_med":    result["stress_prob_med"],
-        "stress_prob_high":   result["stress_prob_high"],
-        "escalation_flag":    result["escalation_flag"],
-        "escalation_prob":    result["escalation_prob"],
-        "recommended_action": result["recommended_action"],
-        "confidence":         result["confidence"],
-        "shap_factors":       Json(result["shap_factors"]),
-        "gemini_narrative":   narrative,
-        "model_version":      result["model_version"],
-    })
+        customer_data = {
+            "limit_bal":          customer.limit_bal,
+            "sex":                customer.sex,
+            "education":          customer.education,
+            "marriage":           customer.marriage,
+            "age":                customer.age,
+            "avg_utilization":    customer.features.avg_utilization,
+            "util_change":        customer.features.util_change,
+            "pay_delay_trend":    customer.features.pay_delay_trend,
+            "avg_pay_delay":      customer.features.avg_pay_delay,
+            "consecutive_delays": customer.features.consecutive_delays,
+            "avg_repay_ratio":    customer.features.avg_repay_ratio,
+            "spending_volatility": customer.features.spending_volatility,
+            "pay_amt_trend":      customer.features.pay_amt_trend,
+        }
 
-    await db.auditlog.create(data={
-        "user_id":       current_user.id,
-        "action":        "RUN_PREDICTION",
-        "resource_id":   prediction.id,
-        "resource_type": "prediction",
-        "ip_address":    request.client.host if request.client else None,
-    })
+        result = run_prediction(customer_data)
 
-    return prediction
+        try:
+            narrative = await generate_narrative(
+                result, {"customer_ref": customer.customer_ref}
+            )
+        except Exception:
+            narrative = (
+                f"Customer shows {result['stress_label']} stress. "
+                f"Recommended action: {result['recommended_action']}."
+            )
+
+        from app.generated.prisma import Json
+        prediction = await db.prediction.create(data={
+            "customer":           {"connect": {"id": body.customer_id}},
+            "requester":          {"connect": {"id": current_user.id}},
+            "stress_level":       result["stress_level"],
+            "stress_label":       result["stress_label"],
+            "stress_prob_low":    result["stress_prob_low"],
+            "stress_prob_med":    result["stress_prob_med"],
+            "stress_prob_high":   result["stress_prob_high"],
+            "escalation_flag":    result["escalation_flag"],
+            "escalation_prob":    result["escalation_prob"],
+            "recommended_action": result["recommended_action"],
+            "confidence":         result["confidence"],
+            "shap_factors":       Json(result["shap_factors"]),
+            "gemini_narrative":   narrative,
+            "model_version":      result["model_version"],
+        })
+
+        await db.auditlog.create(data={
+            "user_id":       current_user.id,
+            "action":        "RUN_PREDICTION",
+            "resource_id":   prediction.id,
+            "resource_type": "prediction",
+            "ip_address":    request.client.host if request.client else None,
+        })
+
+        return prediction
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_msg = f"Inference Error: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 # ── GET /api/predictions/{customer_id} ───────────────────────────────────────
@@ -157,24 +165,6 @@ async def get_analytics(current_user=Depends(get_current_user)):
             "Monitor":     monitor,
         }
     }
-
-
-# ── POST /api/chat ────────────────────────────────────────────────────────────
-
-@router.post("/chat")
-async def chat(
-    body: ChatRequest,
-    current_user=Depends(get_current_user)
-):
-    """
-    RAG chatbot — fetches customer data from NeonDB,
-    grounds Gemini response in real prediction data.
-    """
-    result = await chat_with_context(
-        message=body.message,
-        customer_id=body.customer_id
-    )
-    return result
 
 
 # ── GET /api/rate-limit ───────────────────────────────────────────────────────

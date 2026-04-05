@@ -5,8 +5,9 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-export function Navbar() {
+export function Navbar({ session }: { session?: any }) {
   const navRef = useRef<HTMLDivElement>(null);
+  const isLoggedIn = !!session?.user;
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -48,8 +49,11 @@ export function Navbar() {
         </div>
 
         <div>
-          <Link href="/auth" className="px-5 py-2.5 rounded-md border border-primary text-primary hover:bg-primary hover:text-inverse text-sm font-medium transition-all duration-200 shadow-[0_0_15px_transparent] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]">
-            Get Access
+          <Link 
+            href={isLoggedIn ? "/dashboard" : "/auth"} 
+            className="px-5 py-2.5 rounded-md border border-primary text-primary hover:bg-primary hover:text-white text-sm font-medium transition-all duration-200 shadow-[0_0_15px_transparent] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
+          >
+            {isLoggedIn ? "Go to Dashboard" : "Get Access"}
           </Link>
         </div>
       </nav>

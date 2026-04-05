@@ -8,7 +8,7 @@ import json
 
 # ── Gemini 2.5 Flash ──────────────────────────────────────────────────────────
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-preview-04-17",
+    model="gemini-2.5-flash",
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.3,
 )

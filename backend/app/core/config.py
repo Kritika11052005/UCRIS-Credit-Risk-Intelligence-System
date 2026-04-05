@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # ── Models ────────────────────────────────────────────
-    MODELS_DIR: str = "../models"
+    MODELS_DIR: str = "../../models"
 
     class Config:
         env_file = ".env"

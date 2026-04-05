@@ -16,10 +16,10 @@
   --color-risk-critical: var(--risk-critical);
   --color-risk-escalating: var(--risk-escalating);
 
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
-  --color-text-inverse: var(--text-inverse);
+  --color-primary-text: var(--text-primary);
+  --color-secondary-text: var(--text-secondary);
+  --color-muted-text: var(--text-muted);
+  --color-inverse: var(--text-inverse);
 
   --font-sans: var(--font-inter);
   --font-display: var(--font-bricolage);

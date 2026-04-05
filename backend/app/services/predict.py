@@ -55,7 +55,7 @@ __main__.UCRISHybridJointModel = UCRISHybridJointModel
 # ── Model paths ───────────────────────────────────────────────────────────────
 # Resolve relative to this file: services/ -> app/ -> backend/ -> project root
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-MODELS_DIR = os.path.join(_PROJECT_ROOT, "models")
+MODELS_DIR = os.path.join(_PROJECT_ROOT, "backend", "models")
 
 RF_PATH      = os.path.join(MODELS_DIR, "random_forest", "model.pkl")
 XGB_PATH     = os.path.join(MODELS_DIR, "xgboost", "model.pkl")
@@ -171,17 +171,36 @@ def run_prediction(customer_data: dict) -> dict:
     recommended_action = ACTION_MAP.get(key, "Alert")
 
     # Step 8: SHAP explanation (top 5 features)
-    explainer   = shap.Explainer(rf_model, X_scaled)
-    shap_values = explainer(X_scaled)
-    top_indices = np.argsort(np.abs(shap_values.values[0, :, stress_level]))[-5:][::-1]
-    shap_factors = [
-        {
-            "feature":    feature_names[i],
-            "value":      float(X[0, i]),
-            "shap_value": float(shap_values.values[0, i, stress_level]),
-        }
-        for i in top_indices
-    ]
+    try:
+        # TreeExplainer is faster and optimized for tree models like RF
+        explainer_tree = shap.TreeExplainer(rf_model)
+        shap_vals_all = explainer_tree.shap_values(X_scaled)
+        
+        # shap_values from TreeExplainer for multi-class yields a list of 3 (n_rows, n_feats) arrays
+        # or a 3D array (n_rows, n_feats, n_classes). Normalizing to handle both.
+        if isinstance(shap_vals_all, list):
+            # For Low/Med/High class, index by stress_level (e.g. 0, 1, 2)
+            shap_row = shap_vals_all[stress_level][0]
+        else:
+            # 3D array: (row, feat, class)
+            shap_row = shap_vals_all[0, :, stress_level]
+
+        top_indices = np.argsort(np.abs(shap_row))[-5:][::-1]
+        shap_factors = [
+            {
+                "feature":    feature_names[i],
+                "value":      float(X[0, i]),
+                "shap_value": float(shap_row[i]),
+            }
+            for i in top_indices
+        ]
+    except Exception as e:
+        print(f"[WARN] SHAP calculation failed: {e}")
+        # Return empty list or basic top features if SHAP crashes
+        shap_factors = [
+            {"feature": feature_names[i], "value": float(X[0, i]), "shap_value": 0.0}
+            for i in range(5) if i < len(feature_names)
+        ]
 
     # Step 9: Confidence
     max_prob = float(max(stress_probs))

@@ -24,6 +24,7 @@ model User {
   customers       Customer[]
   predictions     Prediction[]
   audit_logs      AuditLog[]
+  conversations   Conversation[]
 
   @@map("users")
 }
@@ -122,4 +123,28 @@ model AuditLog {
   user          User     @relation(fields: [user_id], references: [id])
 
   @@map("audit_logs")
+}
+
+model Conversation {
+  id           String    @id @default(uuid())
+  user_id      String
+  title        String
+  last_message String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  messages     Message[]
+  user         User      @relation(fields: [user_id], references: [id])
+
+  @@map("conversations")
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversation_id String
+  role            String       // "user" or "assistant"
+  content         String
+  created_at      DateTime     @default(now())
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+
+  @@map("messages")
 }

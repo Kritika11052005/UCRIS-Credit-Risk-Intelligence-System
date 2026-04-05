@@ -3,9 +3,16 @@
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { Users, AlertTriangle, TrendingUp, ShieldAlert } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
-export function StatCards() {
+type StatProps = {
+  total: number;
+  high: number;
+  escalating: number;
+  restructure: number;
+};
+
+export function StatCards({ data }: { data: StatProps }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,7 +53,7 @@ export function StatCards() {
           <Users size={16} className="text-muted-text" />
         </div>
         <div className="flex items-end justify-between">
-          <span className="count-up font-mono text-3xl text-primary-text" data-target="30000">0</span>
+          <span className="count-up font-mono text-3xl text-primary-text" data-target={data.total}>0</span>
           <span className="text-[11px] font-sans text-risk-low bg-risk-low/10 px-2 py-0.5 rounded border border-risk-low/20">+12%</span>
         </div>
       </div>
@@ -57,7 +64,7 @@ export function StatCards() {
           <AlertTriangle size={16} className="text-risk-critical" />
         </div>
         <div className="flex items-end justify-between">
-          <span className="count-up font-mono text-3xl text-primary-text" data-target="1420">0</span>
+          <span className="count-up font-mono text-3xl text-primary-text" data-target={data.high}>0</span>
           <span className="text-[11px] font-sans text-risk-critical bg-risk-critical/10 px-2 py-0.5 rounded border border-risk-critical/20">+5%</span>
         </div>
       </div>
@@ -68,7 +75,7 @@ export function StatCards() {
           <TrendingUp size={16} className="text-risk-escalating" />
         </div>
         <div className="flex items-end justify-between">
-          <span className="count-up font-mono text-3xl text-primary-text" data-target="842">0</span>
+          <span className="count-up font-mono text-3xl text-primary-text" data-target={data.escalating}>0</span>
           <span className="text-[11px] font-sans text-risk-escalating bg-risk-escalating/10 px-2 py-0.5 rounded border border-risk-escalating/20">+18%</span>
         </div>
       </div>
@@ -79,7 +86,7 @@ export function StatCards() {
           <ShieldAlert size={16} className="text-secondary" />
         </div>
         <div className="flex items-end justify-between">
-          <span className="count-up font-mono text-3xl text-primary-text" data-target="315">0</span>
+          <span className="count-up font-mono text-3xl text-primary-text" data-target={data.restructure}>0</span>
           <span className="text-[11px] font-sans text-secondary bg-secondary/10 px-2 py-0.5 rounded border border-secondary/20">-2%</span>
         </div>
       </div>
@@ -87,12 +94,10 @@ export function StatCards() {
   );
 }
 
-const mockEscalationData = Array.from({ length: 30 }).map((_, i) => ({
-  date: `2025-10-${(i + 1).toString().padStart(2, '0')}`,
-  count: Math.floor(Math.random() * 40) + 20 + i * 1.5
-}));
+type DistProps = { low: number; medium: number; high: number; total: number };
+type EscDataProps = { date: string; count: number }[];
 
-export function DashboardCharts() {
+export function DashboardCharts({ distribution, escalationData }: { distribution: DistProps, escalationData: EscDataProps }) {
   const donutRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -120,32 +125,44 @@ export function DashboardCharts() {
     }
   }, []);
 
+  // Map data for Recharts Pie
+  const pieData = [
+    { name: 'Low', value: distribution.low || 0, color: '#22C55E' },
+    { name: 'Medium', value: distribution.medium || 0, color: '#FBBF24' },
+    { name: 'High', value: distribution.high || 0, color: '#EF4444' }
+  ].filter(d => d.value > 0);
+
   return (
     <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       {/* Donut Chart */}
       <div className="glass p-6 rounded-xl flex flex-col items-center">
         <h3 className="font-display text-sm font-semibold text-secondary-text mb-6 w-full text-left">Stress Distribution</h3>
         <div className="relative w-[180px] h-[180px]">
-          <svg ref={donutRef} viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-             {/* Background circle */}
-             <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1F1F1F" strokeWidth="12" />
-             {/* Low Stress (Green) - ~70% */}
-             <path d="M 50 10 A 40 40 0 1 1 11.23 60" fill="transparent" stroke="#22C55E" strokeWidth="12" />
-             {/* Medium Stress (Amber) - ~20% */}
-             {/* (starts at previous end) */}
-             <path d="M 11.23 60 A 40 40 0 0 1 18.23 25" fill="transparent" stroke="#FBBF24" strokeWidth="12" />
-             {/* High Stress (Red) - ~10% */}
-             <path d="M 18.23 25 A 40 40 0 0 1 50 10" fill="transparent" stroke="#EF4444" strokeWidth="12" />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center flex-col">
-            <span className="font-mono text-2xl text-primary-text">30K</span>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+                stroke="none"
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+            <span className="font-mono text-2xl text-primary-text">{distribution.total > 1000 ? (distribution.total/1000).toFixed(1)+'K' : distribution.total}</span>
             <span className="font-sans text-[10px] text-muted-text uppercase">Total</span>
           </div>
         </div>
         <div className="w-full flex justify-between mt-6 px-2 text-xs font-sans">
-           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-low"></div><span className="text-muted-text">70%</span></div>
-           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-medium"></div><span className="text-muted-text">20%</span></div>
-           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-critical"></div><span className="text-muted-text">10%</span></div>
+           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-low"></div><span className="text-muted-text">{distribution.total ? Math.round((distribution.low/distribution.total)*100) : 0}%</span></div>
+           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-medium"></div><span className="text-muted-text">{distribution.total ? Math.round((distribution.medium/distribution.total)*100) : 0}%</span></div>
+           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-risk-critical"></div><span className="text-muted-text">{distribution.total ? Math.round((distribution.high/distribution.total)*100) : 0}%</span></div>
         </div>
       </div>
 
@@ -154,7 +171,7 @@ export function DashboardCharts() {
         <h3 className="font-display text-sm font-semibold text-secondary-text mb-6">Escalation Trend (30 Days)</h3>
         <div className="flex-1 w-full h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={mockEscalationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={escalationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#F97316" stopOpacity={0.3}/>
@@ -178,15 +195,9 @@ export function DashboardCharts() {
   );
 }
 
-const mockPredictions = [
-  { id: "C-9428", stress: "High", esc: "Escalating", action: "Restructure", conf: "94%", date: "2 mins ago" },
-  { id: "C-2150", stress: "Medium", esc: "Stable", action: "Alert", conf: "88%", date: "15 mins ago" },
-  { id: "C-1102", stress: "Low", esc: "Stable", action: "Monitor", conf: "99%", date: "1 hour ago" },
-  { id: "C-8841", stress: "High", esc: "Stable", action: "Alert", conf: "82%", date: "2 hours ago" },
-  { id: "C-3392", stress: "High", esc: "Escalating", action: "Restructure", conf: "91%", date: "3 hours ago" },
-];
+type PredictionProps = { id: string; customerId: string; stress: string; esc: string; action: string; conf: string; date: string; }[];
 
-export function RecentTable() {
+export function RecentTable({ predictions }: { predictions: PredictionProps }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -218,9 +229,9 @@ export function RecentTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {mockPredictions.map((pred, i) => (
+            {predictions.map((pred, i) => (
               <tr key={i} className="hover:bg-[#111111]/80 transition-colors group">
-                <td className="px-6 py-4 font-mono text-primary-text">{pred.id}</td>
+                <td className="px-6 py-4 font-mono text-primary-text">{pred.customerId}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${
                     pred.stress === 'Low' ? 'bg-risk-low/10 text-risk-low border-risk-low/20' : 
@@ -246,7 +257,7 @@ export function RecentTable() {
                 <td className="px-6 py-4 font-mono text-secondary-text">{pred.conf}</td>
                 <td className="px-6 py-4 text-muted-text text-xs">{pred.date}</td>
                 <td className="px-6 py-4 text-right">
-                  <button className="px-3 py-1.5 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-inverse transition-colors text-xs opacity-0 group-hover:opacity-100 focus:opacity-100">
+                  <button onClick={() => alert(`Prediction re-run initiated for ${pred.customerId}. Check the Customers dashboard for details.`)} className="px-3 py-1.5 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-inverse transition-colors text-xs focus:opacity-100">
                     Predict
                   </button>
                 </td>

@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import gsap from "gsap";
 import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { registerUserAction } from "@/app/actions";
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,9 +20,6 @@ export function AuthForm() {
   // Register form refs
   const registerFormRef = useRef<HTMLFormElement>(null);
   const [showRegPass, setShowRegPass] = useState(false);
-  const [showRegConfirmPass, setShowRegConfirmPass] = useState(false);
-  const [regRole, setRegRole] = useState<"Analyst" | "Manager">("Analyst");
-  const rolePillRef = useRef<HTMLDivElement>(null);
   const [passStrength, setPassStrength] = useState(0); // 0-100
   const passStrengthBarRef = useRef<HTMLDivElement>(null);
 
@@ -45,17 +44,7 @@ export function AuthForm() {
     }
   }, [isLogin]);
 
-  // Role switcher animation
-  useEffect(() => {
-    if (rolePillRef.current) {
-      gsap.to(rolePillRef.current, {
-        x: regRole === "Analyst" ? 0 : "100%",
-        duration: 0.25,
-        ease: "power2.out"
-      });
-    }
-  }, [regRole]);
-
+  // Removed Role switcher animation as the Manager role was removed
   // Password strength animation
   const handlePassChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const p = e.target.value;
@@ -93,19 +82,45 @@ export function AuthForm() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
 
-    setTimeout(() => {
+    const email = (document.getElementById("login-email") as HTMLInputElement).value;
+    const password = (document.getElementById("login-password") as HTMLInputElement).value;
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setLoginError("Invalid credentials");
+      setLoginLoading(false);
+      shakeForm(loginFormRef);
+    } else {
       window.location.href = "/dashboard";
-    }, 600);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.location.href = "/dashboard";
+    if (passStrength < 30) {
+      alert("Please choose a stronger password");
+      return;
+    }
+    const name = (document.getElementById("reg-name") as HTMLInputElement).value;
+    const email = (document.getElementById("reg-email") as HTMLInputElement).value;
+    const password = (document.getElementById("reg-pass") as HTMLInputElement).value;
+
+    try {
+      await registerUserAction({ name, email, password });
+      await signIn("credentials", { email, password, callbackUrl: "/dashboard" });
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const InputField = ({ label, type, state, setState, id }: any) => {
@@ -166,7 +181,7 @@ export function AuthForm() {
 
         <div className="relative mb-2">
           <InputField id="login-password" label="Password" type={showLoginPass ? "text" : "password"} state={loginError} />
-          <button type="button" onClick={() => setShowLoginPass(!showLoginPass)} className="absolute right-3 top-4 text-muted-text hover:text-secondary-text transition-colors">
+          <button type="button" onClick={() => setShowLoginPass(!showLoginPass)} className="absolute right-3 top-[22px] z-20 text-muted-text hover:text-secondary-text transition-colors">
             {showLoginPass ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
@@ -189,11 +204,7 @@ export function AuthForm() {
           <p className="text-secondary-text text-sm mt-1">Join the risk intelligence platform</p>
         </div>
 
-        <div className="relative flex bg-[#171717] rounded-lg p-1 mb-5">
-          <div ref={rolePillRef} className="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-primary/20 border border-primary/40 rounded-md z-0"></div>
-          <button type="button" onClick={() => setRegRole("Analyst")} className={`flex-1 py-1.5 text-xs font-medium z-10 transition-colors ${regRole === "Analyst" ? "text-primary" : "text-muted-text"}`}>Analyst</button>
-          <button type="button" onClick={() => setRegRole("Manager")} className={`flex-1 py-1.5 text-xs font-medium z-10 transition-colors ${regRole === "Manager" ? "text-primary" : "text-muted-text"}`}>Manager</button>
-        </div>
+
 
         <div className="flex gap-3">
           <div className="flex-1">
@@ -221,7 +232,7 @@ export function AuthForm() {
               Password
             </label>
           </div>
-          <button type="button" onClick={() => setShowRegPass(!showRegPass)} className="absolute right-3 top-4 text-muted-text hover:text-secondary-text transition-colors">
+          <button type="button" onClick={() => setShowRegPass(!showRegPass)} className="absolute right-3 top-[22px] z-20 text-muted-text hover:text-secondary-text transition-colors">
             {showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
