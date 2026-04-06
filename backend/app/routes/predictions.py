@@ -67,6 +67,10 @@ async def predict(
         }
 
         result = run_prediction(customer_data)
+        
+        # Check if the AI model server returned an error
+        if "error" in result:
+             raise HTTPException(status_code=500, detail=f"AI Model Error: {result['error']}")
 
         try:
             narrative = await generate_narrative(

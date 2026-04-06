@@ -52,64 +52,86 @@ PAY_COLS = ['PAY_0','PAY_2','PAY_3','PAY_4','PAY_5','PAY_6']
 PAY_AMT_COLS = ['PAY_AMT1','PAY_AMT2','PAY_AMT3','PAY_AMT4','PAY_AMT5','PAY_AMT6']
 
 def engineer_features(data: dict, feature_names: List[str]) -> pd.DataFrame:
-    # Ensure PAY_1 is mapped to PAY_0 (UCI consistency)
-    if "pay_1" in data:
-        data["pay_0"] = data.pop("pay_1")
-    
-    raw_df = pd.DataFrame([data])
-    
-    # Simple normalization for column names
-    col_map = {
-        "limit_bal": "LIMIT_BAL", "sex": "SEX", "education": "EDUCATION", 
-        "marriage": "MARRIAGE", "age": "AGE"
-    }
-    for i in range(1, 7):
-        col_map[f"pay_{i}"] = f"PAY_{i}" if i != 1 else "PAY_0"
-        col_map[f"bill_amt{i}"] = f"BILL_AMT{i}"
-        col_map[f"pay_amt{i}"] = f"PAY_AMT{i}"
-    
-    df = raw_df.rename(columns=col_map)
-    x_range = np.arange(6)
+    """
+    Revised: Smart feature engineering. 
+    It checks if the data reaching the model is 'Raw' or 'Already Engineered'.
+    """
+    # ── Check if already engineered ──
+    # If the dictionary already contains 'avg_utilization', we assume 
+    # the feature engineering happened in the main backend already.
+    if "avg_utilization" in data:
+        print("[INFO] Data already engineered. Mapping base columns...")
+        df = pd.DataFrame([data])
+        # Mapping base columns to UCIS format (CAPS)
+        col_map = {
+            "limit_bal": "LIMIT_BAL", "sex": "SEX", "education": "EDUCATION", 
+            "marriage": "MARRIAGE", "age": "AGE"
+        }
+        df = df.rename(columns=col_map)
+    else:
+        # ── Data is RAW, we need to calculate everything ──
+        print("[INFO] Data is RAW. Calculating temporal features...")
+        # Ensure PAY_1 is mapped to PAY_0 (UCI consistency)
+        if "pay_1" in data:
+            data["pay_0"] = data.pop("pay_1")
+        
+        raw_df = pd.DataFrame([data])
+        
+        # Simple normalization for column names
+        col_map = {
+            "limit_bal": "LIMIT_BAL", "sex": "SEX", "education": "EDUCATION", 
+            "marriage": "MARRIAGE", "age": "AGE"
+        }
+        for i in range(1, 7):
+            col_map[f"pay_{i}"] = f"PAY_{i}" if i != 1 else "PAY_0"
+            col_map[f"bill_amt{i}"] = f"BILL_AMT{i}"
+            col_map[f"pay_amt{i}"] = f"PAY_AMT{i}"
+        
+        df = raw_df.rename(columns=col_map)
+        x_range = np.arange(6)
 
-    # Utilization
-    for i, col in enumerate(BILL_COLS, 1):
-        df[f'UTIL_{i}'] = (df[col] / df['LIMIT_BAL'].replace(0, np.nan)).clip(0, 1).fillna(0)
-    
-    util_cols = [f'UTIL_{i}' for i in range(1, 7)]
-    df['avg_utilization'] = df[util_cols].mean(axis=1)
-    df['util_recent'] = df[['UTIL_1', 'UTIL_2']].mean(axis=1)
-    df['util_early'] = df[['UTIL_5', 'UTIL_6']].mean(axis=1)
-    df['util_change'] = df['util_recent'] - df['util_early']
+        # Utilization
+        for i, col in enumerate(BILL_COLS, 1):
+            df[f'UTIL_{i}'] = (df[col] / df['LIMIT_BAL'].replace(0, np.nan)).clip(0, 1).fillna(0)
+        
+        util_cols = [f'UTIL_{i}' for i in range(1, 7)]
+        df['avg_utilization'] = df[util_cols].mean(axis=1)
+        df['util_recent'] = df[['UTIL_1', 'UTIL_2']].mean(axis=1)
+        df['util_early'] = df[['UTIL_5', 'UTIL_6']].mean(axis=1)
+        df['util_change'] = df['util_recent'] - df['util_early']
 
-    # Payment Delays
-    pay_matrix = df[PAY_COLS].values.astype(float)
-    df['pay_delay_trend'] = np.array([np.polyfit(x_range, row, 1)[0] for row in pay_matrix])
-    df['avg_pay_delay'] = df[PAY_COLS].mean(axis=1)
-    df['consecutive_delays'] = df[PAY_COLS].gt(0).sum(axis=1)
+        # Payment Delays
+        pay_matrix = df[PAY_COLS].values.astype(float)
+        df['pay_delay_trend'] = np.array([np.polyfit(x_range, row, 1)[0] for row in pay_matrix])
+        df['avg_pay_delay'] = df[PAY_COLS].mean(axis=1)
+        df['consecutive_delays'] = df[PAY_COLS].gt(0).sum(axis=1)
 
-    # Repayment
-    for i, (p, b) in enumerate(zip(PAY_AMT_COLS, BILL_COLS), 1):
-        df[f'REPAY_RATIO_{i}'] = np.where(df[b] > 0, (df[p] / df[b]).clip(0, 1), 1.0)
-    
-    repay_cols = [f'REPAY_RATIO_{i}' for i in range(1, 7)]
-    df['avg_repay_ratio'] = df[repay_cols].mean(axis=1)
+        # Repayment
+        for i, (p, b) in enumerate(zip(PAY_AMT_COLS, BILL_COLS), 1):
+            df[f'REPAY_RATIO_{i}'] = np.where(df[b] > 0, (df[p] / df[b]).clip(0, 1), 1.0)
+        
+        repay_cols = [f'REPAY_RATIO_{i}' for i in range(1, 7)]
+        df['avg_repay_ratio'] = df[repay_cols].mean(axis=1)
 
-    # Volatility
-    df['spending_volatility'] = np.log1p(df[BILL_COLS].std(axis=1))
+        # Volatility
+        df['spending_volatility'] = np.log1p(df[BILL_COLS].std(axis=1))
 
-    # Pay Amount Trend
-    pay_amt_matrix = df[PAY_AMT_COLS].values.astype(float)
-    slopes = np.array([np.polyfit(x_range, row, 1)[0] for row in pay_amt_matrix])
-    df['pay_amt_trend'] = np.sign(slopes) * np.log1p(np.abs(slopes))
+        # Pay Amount Trend
+        pay_amt_matrix = df[PAY_AMT_COLS].values.astype(float)
+        slopes = np.array([np.polyfit(x_range, row, 1)[0] for row in pay_amt_matrix])
+        df['pay_amt_trend'] = np.sign(slopes) * np.log1p(np.abs(slopes))
 
-    # Categorical handling
+    # --- Categorical handling & Final Column Selection ---
     base_features = [f for f in feature_names if not f.startswith("RF_prob_") and not f.startswith("XGB_")]
     for col in base_features:
         if col not in df:
             prefix = col.split("_")[0]
             if prefix in ['SEX', 'EDUCATION', 'MARRIAGE']:
-                val = int(col.split("_")[1])
-                df[col] = (df.get(prefix, np.nan) == val).astype(int)
+                if prefix in df.columns:
+                   val = int(col.split("_")[1])
+                   df[col] = (df[prefix] == val).astype(int)
+                else:
+                   df[col] = 0
             else:
                 df[col] = 0
                 
