@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "UCRIS API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "https://ucris-credit-risk-intelligence-syst.vercel.app"
+    ]
 
     # ── Models ────────────────────────────────────────────
     MODELS_DIR: str = "../../models"
