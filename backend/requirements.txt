@@ -17,14 +17,10 @@ pydantic>=2.9.2
 pydantic[email]>=2.9.2
 pydantic-settings>=2.5.2
 
-# ── ML & Prediction ───────────────────────────────────────
+# ── ML & Prediction (Offloaded to Hugging Face) ───────────
 numpy>=1.26.4
 pandas>=2.2.3
-scikit-learn==1.6.1
-xgboost>=2.1.1
-torch>=2.6.0
-shap>=0.46.0
-joblib>=1.4.2
+
 
 # ── LangChain + Gemini ────────────────────────────────────
 langchain>=0.3.7
