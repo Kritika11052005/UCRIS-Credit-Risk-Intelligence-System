@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Search, ChevronRight, User, AlertTriangle, ArrowRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { searchCustomersAction, getRecentAlertsAction } from "@/app/actions";
+import { searchCustomersAction, getRecentAlertsAction, markNotificationsAsReadAction } from "@/app/actions";
 import { clsx } from "clsx";
 
 export function TopBar() {
@@ -64,11 +64,13 @@ export function TopBar() {
   }, [searchQuery]);
 
   // Fetch Notifications
-  useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const data = await getRecentAlertsAction();
         setAlerts(data);
+        // Check if there are any unread notifications
+        const unread = data.some((a: any) => !a.isRead);
+        setHasUnread(unread);
       } catch (error) {
         console.error("Failed to fetch alerts:", error);
       }
@@ -96,9 +98,16 @@ export function TopBar() {
     router.push(`/dashboard/customers?search=${customerId}`);
   };
 
-  const clearNotifications = () => {
-    setHasUnread(false);
-    setIsNotificationsOpen(false);
+  const clearNotifications = async () => {
+    try {
+      await markNotificationsAsReadAction();
+      setHasUnread(false);
+      // Optionally refresh the alerts list to show they are read
+      const updatedAlerts = alerts.map(a => ({ ...a, isRead: true }));
+      setAlerts(updatedAlerts);
+    } catch (error) {
+      console.error("Failed to mark notifications as read:", error);
+    }
   };
 
   return (
@@ -221,20 +230,22 @@ export function TopBar() {
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-0.5">
-                            <span className="text-sm font-bold text-primary-text">{alert.customerRef}</span>
-                            <span className="text-[9px] font-mono text-muted-text">
+                            <span className="text-sm font-bold text-primary-text leading-tight">{alert.title || alert.customerRef}</span>
+                            <span className="text-[9px] font-mono text-muted-text shrink-0 pb-1">
                               {new Date(alert.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <p className="text-xs text-muted-text leading-tight mb-2">
-                             Critical anomaly detected. Recommendation: <span className="text-primary/80 font-medium">"{alert.action}"</span>
+                             {alert.message}
                           </p>
-                          <button 
-                            onClick={() => router.push(`/dashboard/customers?search=${alert.customerRef}`)}
-                            className="text-[10px] text-primary font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            View Case Details <ChevronRight size={10} />
-                          </button>
+                          {alert.customerRef !== 'SYSTEM' && (
+                            <button 
+                              onClick={() => router.push(`/dashboard/customers?search=${alert.customerRef}`)}
+                              className="text-[10px] text-primary font-bold flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              View Case Details <ChevronRight size={10} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

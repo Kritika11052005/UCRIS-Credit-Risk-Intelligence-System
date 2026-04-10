@@ -108,6 +108,32 @@ async def predict(
             "ip_address":    request.client.host if request.client else None,
         })
 
+        # ── Create Notification for High Risk / Escalation ──────────────────
+        if result["stress_level"] >= 2 or result["escalation_flag"] == 1:
+            try:
+                # Dynamic message based on risk
+                risk_prefix = "Critical Risk" if result["stress_level"] >= 2 else "Risk Alert"
+                notification_msg = (
+                    f"{risk_prefix}: Account {customer.customer_ref} detected with "
+                    f"{result['stress_label']} stress. Recommended action: {result['recommended_action']}."
+                )
+                
+                await db.notification.create(data={
+                    "user_id": current_user.id,
+                    "type": "RISK_ALERT",
+                    "title": f"High Risk Detected: {customer.customer_ref}",
+                    "message": notification_msg,
+                    "metadata": Json({
+                        "customer_id": customer.id,
+                        "customer_ref": customer.customer_ref,
+                        "prediction_id": prediction.id,
+                        "stress_label": result["stress_label"]
+                    })
+                })
+            except Exception as notify_err:
+                # Don't fail the prediction if notification fails
+                print(f"Failed to create notification: {str(notify_err)}")
+
         return prediction
     except HTTPException:
         raise

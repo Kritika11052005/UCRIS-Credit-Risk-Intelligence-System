@@ -232,25 +232,42 @@ export async function getRecentAlertsAction() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  const alerts = await prisma.prediction.findMany({
+  const notifications = await prisma.notification.findMany({
     where: {
-      OR: [
-        { stress_level: { gte: 2 } }, // High
-        { escalation_flag: 1 }
-      ]
+      user_id: session.user.id
     },
-    take: 5,
-    orderBy: { predicted_at: "desc" },
-    include: {
-      customer: true
+    take: 10,
+    orderBy: { created_at: "desc" }
+  });
+
+  return notifications.map(n => {
+    const meta = n.metadata as any;
+    return {
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      customerRef: meta?.customer_ref || "SYSTEM",
+      stress: meta?.stress_label || "Info", // For color coding
+      date: n.created_at.toISOString(),
+      isRead: n.is_read
+    };
+  });
+}
+
+export async function markNotificationsAsReadAction() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await prisma.notification.updateMany({
+    where: {
+      user_id: session.user.id,
+      is_read: false
+    },
+    data: {
+      is_read: true
     }
   });
 
-  return alerts.map(a => ({
-    id: a.id,
-    customerRef: a.customer.customer_ref,
-    stress: a.stress_label,
-    action: a.recommended_action,
-    date: a.predicted_at.toISOString()
-  }));
+  return { success: true };
 }
