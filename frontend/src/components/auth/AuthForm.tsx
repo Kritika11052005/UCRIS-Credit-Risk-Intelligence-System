@@ -6,6 +6,28 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { registerUserAction } from "@/app/actions";
 
+const InputField = ({ label, type, state, id, onChange }: any) => {
+  return (
+    <div className="relative mb-5 group">
+      <input
+        id={id}
+        type={type}
+        required
+        onChange={onChange}
+        className={`peer w-full bg-[#171717] border border-[#1F1F1F] rounded-lg px-4 pt-6 pb-2 text-primary-text text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${state ? "border-risk-critical focus:border-risk-critical focus:ring-risk-critical/10" : ""}`}
+        placeholder=" "
+        autoComplete="off"
+      />
+      <label
+        htmlFor={id}
+        className="absolute left-4 top-4 text-secondary-text text-sm transition-all duration-200 pointer-events-none peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-primary peer-valid:top-2 peer-valid:text-[11px]"
+      >
+        {label}
+      </label>
+    </div>
+  );
+};
+
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,27 +145,6 @@ export function AuthForm() {
     }
   };
 
-  const InputField = ({ label, type, state, setState, id }: any) => {
-    return (
-      <div className="relative mb-5 group">
-        <input
-          id={id}
-          type={type}
-          required
-          className={`peer w-full bg-[#171717] border border-[#1F1F1F] rounded-lg px-4 pt-6 pb-2 text-primary-text text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${state ? "border-risk-critical focus:border-risk-critical focus:ring-risk-critical/10" : ""}`}
-          placeholder=" "
-          autoComplete="off"
-        />
-        <label
-          htmlFor={id}
-          className="absolute left-4 top-4 text-secondary-text text-sm transition-all duration-200 pointer-events-none peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-primary peer-valid:top-2 peer-valid:text-[11px]"
-        >
-          {label}
-        </label>
-      </div>
-    );
-  };
-
   return (
     <div ref={containerRef} className="relative z-10 w-[420px] bg-[#111111]/85 backdrop-blur-[24px] border border-primary/15 rounded-[20px] shadow-[0_0_60px_rgba(249,115,22,0.08),0_40px_80px_rgba(0,0,0,0.6)] p-10">
 
@@ -215,23 +216,12 @@ export function AuthForm() {
         <InputField id="reg-email" label="Email address" type="email" />
 
         <div className="relative mb-2">
-          <div className="relative group">
-            <input
-              aria-label="Password"
-              id="reg-pass"
-              type={showRegPass ? "text" : "password"}
-              required
-              onChange={handlePassChange}
-              className="peer w-full bg-[#171717] border border-[#1F1F1F] rounded-lg px-4 pt-6 pb-2 text-primary-text text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-              placeholder=" "
-            />
-            <label
-              htmlFor={"reg-pass"}
-              className="absolute left-4 top-4 text-secondary-text text-sm transition-all duration-200 pointer-events-none peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-primary peer-valid:top-2 peer-valid:text-[11px]"
-            >
-              Password
-            </label>
-          </div>
+          <InputField 
+            id="reg-pass" 
+            label="Password" 
+            type={showRegPass ? "text" : "password"} 
+            onChange={handlePassChange}
+          />
           <button type="button" onClick={() => setShowRegPass(!showRegPass)} className="absolute right-3 top-[22px] z-20 text-muted-text hover:text-secondary-text transition-colors">
             {showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
