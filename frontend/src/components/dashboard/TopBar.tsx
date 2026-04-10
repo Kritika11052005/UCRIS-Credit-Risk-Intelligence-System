@@ -64,6 +64,7 @@ export function TopBar() {
   }, [searchQuery]);
 
   // Fetch Notifications
+  useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const data = await getRecentAlertsAction();
